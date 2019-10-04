@@ -7,12 +7,18 @@ data "archive_file" "my_lambda_function" {
 resource "aws_lambda_function" "lambda_ec2_terminator" {
   function_name    = "ec2-terminator"
   handler          = "ec2-terminator.lambda_handler"
-  role             = "${aws_iam_role.lambda_function_role.arn}"
+  role             = "${aws_iam_role.lambda_ec2terminator_role.arn}"
   runtime          = "python3.7"
   timeout          = 60
   filename         = "${data.archive_file.my_lambda_function.output_path}"
   source_code_hash = "${data.archive_file.my_lambda_function.output_base64sha256}"
 
+  environment {
+    variables = {
+      LB_NAME = "{var.lb_name}"
+      DRY_RUN = "{var.termination_dry_run}"
+    }
+  }
 }
 
 data "template_file" "iam_policy" {
@@ -37,7 +43,7 @@ resource "aws_iam_role" "lambda_ec2terminator_role" {
     {
       "Action": "sts:AssumeRole",
       "Principal": {
-        "Service": "ec2.amazonaws.com"
+        "Service": "lambda.amazonaws.com"
       },
       "Effect": "Allow",
       "Sid": ""
