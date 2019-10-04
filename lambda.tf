@@ -1,3 +1,6 @@
+###
+# Lambda function
+###
 data "archive_file" "my_lambda_function" {
   source_dir  = "${path.module}/code/"
   output_path = "${path.module}/artifact/ec2-terminator.zip"
@@ -15,12 +18,39 @@ resource "aws_lambda_function" "lambda_ec2_terminator" {
 
   environment {
     variables = {
-      LB_NAME = "{var.lb_name}"
-      DRY_RUN = "{var.termination_dry_run}"
+      LB_NAME = "${var.lb_name}"
+      DRY_RUN = "${var.termination_dry_run}"
     }
   }
 }
 
+###
+# scheduling the lambda execution
+###
+resource "aws_cloudwatch_event_rule" "cloudwatch_event_ec2_terminator" {
+    name = "cloudwatch_event_ec2_terminator"
+    description = "triggers execution of ec2-terminator lambda, based on cron-like scheduling"
+    # cron(Minutes Hours Day-of-month Month Day-of-week Year)
+    schedule_expression = "${var.lambda_schedule}"
+}
+
+resource "aws_cloudwatch_event_target" "cloudwatch_event_target_ec2_terminator" {
+    rule = "${aws_cloudwatch_event_rule.cloudwatch_event_ec2_terminator.name}"
+    target_id = "lambda_ec2_terminator"
+    arn = "${aws_lambda_function.lambda_ec2_terminator.arn}"
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_trigger_ec2_terminator" {
+    statement_id = "AllowExecutionFromCloudWatch"
+    action = "lambda:InvokeFunction"
+    function_name = "${aws_lambda_function.lambda_ec2_terminator.function_name}"
+    principal = "events.amazonaws.com"
+    source_arn = "${aws_cloudwatch_event_rule.cloudwatch_event_ec2_terminator.arn}"
+}
+
+###
+# IAM role and policy
+###
 data "template_file" "iam_policy" {
   template = "${file("policy.json.tpl")}"
 
