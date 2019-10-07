@@ -16,8 +16,10 @@ def calcDesiredInstanceCount(lbname):
     
     for asg_group in all_asg_groups['AutoScalingGroups']:
         if asg_group['LoadBalancerNames']:
-            print("asg: ",asg_group['AutoScalingGroupName'], " assigned to loadbalancer: ",asg_group['LoadBalancerNames'][0], " with desired instance count of: ",asg_group['DesiredCapacity'])
-            desiredCount+=asg_group['DesiredCapacity']
+            for single_lb_name in asg_group['LoadBalancerNames']:
+                if lbname == single_lb_name:
+                    print("asg: ",asg_group['AutoScalingGroupName'], " assigned to loadbalancer: ",asg_group['LoadBalancerNames'][0], " with desired instance count of: ",asg_group['DesiredCapacity'])
+                    desiredCount+=asg_group['DesiredCapacity']
 
     return desiredCount
 
